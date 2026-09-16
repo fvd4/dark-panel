@@ -209,6 +209,7 @@ def link_summary(uid: str, link: dict, host: str) -> dict:
         "ip_limit": int(link.get("ip_limit", 0) or 0),
         "expires_at": link.get("expires_at"),
         "vless_links": all_vless_links(link, uid, host),
+        "sub_url": f"https://{host}/sub/{uid}",
     }
 
 

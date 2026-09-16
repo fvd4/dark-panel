@@ -50,6 +50,8 @@ app.state.http_client = None
 
 DEFAULT_CDN_HOST = os.environ.get("CDN_HOST", "").strip()
 DEFAULT_DIRECT_HOST = os.environ.get("DIRECT_HOST", "").strip()
+if CONFIG["host"] == "localhost":
+    CONFIG["host"] = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost").strip() or "localhost"
 
 
 # ── احراز هویت ───────────────────────────────────────────────────────────────
@@ -419,10 +421,17 @@ def _sub_text_for_links(items: list[tuple[str, dict]], host: str) -> str:
 
 @app.get("/sub/{uid}")
 async def subscription_single(uid: str, request: Request):
+    """لینک ساب هوشمند تکی: در مرورگر صفحه وضعیت، در اپ متن ساب (هر دو مسیر)."""
     host = get_host(request)
     link = LINKS.get(uid)
     if not link:
         raise HTTPException(status_code=404, detail="not found")
+    ua = (request.headers.get("user-agent") or "").lower()
+    is_browser = "mozilla" in ua and request.query_params.get("format") != "text"
+    if is_browser:
+        from ui import config_public_page
+        vlinks = all_vless_links(link, uid, host)
+        return HTMLResponse(config_public_page(uid, link, vlinks, f"https://{host}/sub/{uid}"))
     vless = "\n".join(all_vless_links(link, uid, host))
     return PlainTextResponse(base64.b64encode(vless.encode()).decode())
 

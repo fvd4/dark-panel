@@ -15,7 +15,27 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger("novapanel")
 
 # ── مسیر ذخیره‌سازی ──────────────────────────────────────────────────────────
-DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
+def _resolve_data_dir() -> Path:
+    """اول DATA_DIR، بعد /data، وگرنه پوشه محلی. روی هاست رایگان بدون دیسک،
+    حالت محلی باعث می‌شود برنامه بدون خطای Permission بالا بیاید."""
+    cands: list[Path] = []
+    env = os.environ.get("DATA_DIR", "").strip()
+    if env:
+        cands.append(Path(env))
+    cands += [Path("/data"), Path.cwd() / "data"]
+    for p in cands:
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            t = p / ".writetest"
+            t.write_text("ok", encoding="utf-8")
+            t.unlink(missing_ok=True)
+            return p
+        except Exception:
+            continue
+    return Path.cwd()
+
+DATA_DIR = _resolve_data_dir()
+logger.info(f"DATA_DIR = {DATA_DIR}")
 DATA_FILE = DATA_DIR / "nova_state.json"
 SECRET_FILE = DATA_DIR / ".secret"
 
